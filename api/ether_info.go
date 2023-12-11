@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 const FuncNameEtherInfo = "homepage"
@@ -49,20 +50,24 @@ func (i *IKuai) ShowEtherInfoByComment(url string, hostname string, token string
 		}
 	}
 	log.Println("外网ip：" + IpAddr)
-	url += "?hostname=" + hostname + "&token=" + token + "&ipv4=" + IpAddr
-	respd, errs := http.Get(url)
-	if errs != nil {
-		return err
+	arr := strings.Split(hostname, ",")
+	for _, hname := range arr {
+		urlStr := url + "?hostname=" + hname + "&token=" + token + "&ipv4=" + IpAddr
+		respd, errs := http.Get(urlStr)
+		if errs != nil {
+			return err
+		}
+		if respd.StatusCode != 200 {
+			err = errors.New(respd.Status)
+			return err
+		}
+		defer respd.Body.Close()
+		body, err := io.ReadAll(respd.Body)
+		if err != nil {
+			return err
+		}
+		log.Println(hname + "绑定到" + IpAddr + ":" + string(body))
 	}
-	if respd.StatusCode != 200 {
-		err = errors.New(respd.Status)
-		return err
-	}
-	defer respd.Body.Close()
-	body, err := io.ReadAll(respd.Body)
-	if err != nil {
-		return err
-	}
-	log.Println(hostname + "绑定到" + IpAddr + ":" + string(body))
+
 	return nil
 }
